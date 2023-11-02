@@ -3,6 +3,7 @@ from itertools import product
 
 import json_builder as jb
 import file_reader as fr
+import grid_helpers as gh
 
 
 app = Flask(__name__)
@@ -28,8 +29,13 @@ def after_request(response):
 def fine_grid(y_center, x_center):
     depth = 3
     features = []
-    for y, x in product(range(int(y_center) - (depth - 1), int(y_center) + (depth)),
-                        range(int(x_center) - depth, int(x_center) + (depth + 1))):
+    for y, x in gh.get_neighboring_coarse(y_center, x_center, depth):
         features += jb.get_fine_grid_json(y, x,
-                                          app.elevation, app.landlake, app.forests, app.pop3000, app.pop0, app.crop0, app.landarea)
+                                          app.elevation,
+                                          app.landlake,
+                                          app.forests,
+                                          app.pop3000,
+                                          app.pop0,
+                                          app.crop0,
+                                          app.landarea)
     return {"type": "FeatureCollection", "features": features}

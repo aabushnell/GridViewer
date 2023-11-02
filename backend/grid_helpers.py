@@ -65,3 +65,12 @@ def get_valid_neigbors_split(y_pos: int, x_pos: int, depth: int,
     xs = [x[1] for x in pn]
 
     return ys, xs
+
+
+def get_neighboring_coarse(y_center: int, x_center: int, depth: int) -> list[tuple[int, int]]:
+
+    return [(y, x) if 0 <= x < 180 else (y, (x + 180) % 180)
+            for y, x in product(range(int(y_center) - (depth - 1),
+                                      int(y_center) + (depth)),
+                                range(int(x_center) - depth,
+                                      int(x_center) + (depth + 1)))]

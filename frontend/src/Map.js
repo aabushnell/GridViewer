@@ -140,6 +140,7 @@ export default function Map() {
 
       map.on('mousemove', 'fine_grid', (e) => {
         if (e.features.length > 0) {
+          console.log(e.features[0].id);
           setHoveredIDFine(e.features[0].id);
           setElevation(e.features[0].properties.elevation);
           setLandLake(e.features[0].properties.landlake);
@@ -205,15 +206,10 @@ export default function Map() {
   useEffect(() => {
     if (map) {
       if (zoom < ZOOM_THRESHOLD && prevZoom >= ZOOM_THRESHOLD) {
-        // map.removeLayer('fine_grid');
-        // map.removeLayer('fine_lines');
         setCachedFineGrids({});
-        // map.getSource('fine_grid').setData({});
-
         setContext('coarse');
       } else if (zoom >= ZOOM_THRESHOLD && prevZoom < ZOOM_THRESHOLD) {
         const [y, x] = coordToIndexCoarse(lat, lng);
-
         axios({
           method: 'GET',
           url: `http://localhost:5000/api/fine_grid/${y}/${x}`,
