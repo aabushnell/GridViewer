@@ -6,7 +6,10 @@ offset = 0.00027778
 cellsize = 1/12
 
 
-def get_fine_grid_json(y_coarse: int, x_coarse: int, elev_array: list[list[int]], land_array: list[list[int]]) -> dict:
+def get_fine_grid_json(y_coarse: int, x_coarse: int, elev_array: list[list[int]],
+                       land_array: list[list[int]], forest_array: list[list[int]],
+                       pop3000_array: list[list[int]], pop0_array: list[list[int]],
+                       crop0_array: list[list[int]], landarea_array: list[list[int]]) -> dict:
 
     y_start = y_coarse * 24
     x_start = x_coarse * 24
@@ -20,6 +23,11 @@ def get_fine_grid_json(y_coarse: int, x_coarse: int, elev_array: list[list[int]]
         cell_id = y*4320 + x
         elevation = elev_array[y][x]
         landlake = land_array[y][x]
+        forests = forest_array[y][x]
+        pop3000 = pop3000_array[y][x]
+        pop0 = pop0_array[y][x]
+        crop0 = crop0_array[y][x]
+        landarea = landarea_array[y][x]
 
         # center_lat, center_lon = gh.index_to_coord(y, x, cellsize, center=True)
 
@@ -55,7 +63,12 @@ def get_fine_grid_json(y_coarse: int, x_coarse: int, elev_array: list[list[int]]
                         # "center_lat": center_lat,
                         # "center_lon": center_lon,
                         "elevation": elevation,
-                        "landlake": landlake
+                        "landlake": landlake,
+                        "forest": forests,
+                        "pop3000": pop3000,
+                        "pop0": pop0,
+                        "crop0": crop0,
+                        "landarea": landarea
                     },
                 "id": cell_id
         }
