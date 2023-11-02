@@ -36,6 +36,11 @@ export default function Map() {
 
   const [elevation, setElevation] = useState(null);
   const [landlake, setLandLake] = useState(null);
+  const [forest, setForest] = useState(null);
+  const [pop3000, setPop3000] = useState(null);
+  const [pop0, setPop0] = useState(null);
+  const [crop0, setCrop0] = useState(null);
+  const [landarea, setLandArea] = useState(null);
   const [view, setView] = useState('none');
 
   const [cachedFineGrids, setCachedFineGrids] = useState(null);
@@ -138,6 +143,11 @@ export default function Map() {
           setHoveredIDFine(e.features[0].id);
           setElevation(e.features[0].properties.elevation);
           setLandLake(e.features[0].properties.landlake);
+          setForest(e.features[0].properties.forest);
+          setPop3000(e.features[0].properties.pop3000);
+          setPop0(e.features[0].properties.pop0);
+          setCrop0(e.features[0].properties.crop0);
+          setLandArea(e.features[0].properties.landarea);
         }
       });
 
@@ -223,19 +233,21 @@ export default function Map() {
 
   useEffect(() => {
     if (map && cachedFineGrids) {
-      const [y, x] = coordToIndexCoarse(lat, lng);
-      if (y !== centerGrid[0] || x !== centerGrid[1]) {
-        axios({
-          method: 'GET',
-          url: `http://localhost:5000/api/fine_grid/${y}/${x}`,
-        })
-          .then((res) => {
-            setCachedFineGrids(res.data);
+      if (context === 'fine') {
+        const [y, x] = coordToIndexCoarse(lat, lng);
+        if (y !== centerGrid[0] || x !== centerGrid[1]) {
+          axios({
+            method: 'GET',
+            url: `http://localhost:5000/api/fine_grid/${y}/${x}`,
           })
-          .catch((err) => {
-            console.log(err);
-          });
-        setCenterGrid([y, x]);
+            .then((res) => {
+              setCachedFineGrids(res.data);
+            })
+            .catch((err) => {
+              console.log(err);
+            });
+          setCenterGrid([y, x]);
+        }
       }
     }
   }, [cachedFineGrids, centerGrid, lat, lng, map]);
@@ -310,6 +322,77 @@ export default function Map() {
           [1, '#c41010'],
         ],
       });
+    } else if (view === 'forest') {
+      map.setPaintProperty('fine_grid', 'fill-color', {
+        property: 'forest',
+        stops: [
+          [-9999, '#ffffff'],
+          [0, '#1b14e3'],
+          [1, '#c41010'],
+        ],
+      });
+    } else if (view === 'pop3000') {
+      map.setPaintProperty('fine_grid', 'fill-color', {
+        property: 'pop3000',
+        stops: [
+          [-9999, '#000000'],
+          [0, '#3288bd'],
+          [1000, '#66c2a5'],
+          [2000, '#abdda4'],
+          [3000, '#e6f598'],
+          [4000, '#fee08b'],
+          [5000, '#fdae61'],
+          [6000, '#f46d43'],
+          [7000, '#d53e4f'],
+        ],
+      });
+    } else if (view === 'pop0') {
+      map.setPaintProperty('fine_grid', 'fill-color', {
+        property: 'pop0',
+        stops: [
+          [-9999, '#000000'],
+          [0, '#3288bd'],
+          [1000, '#66c2a5'],
+          [2000, '#abdda4'],
+          [3000, '#e6f598'],
+          [4000, '#fee08b'],
+          [5000, '#fdae61'],
+          [6000, '#f46d43'],
+          [7000, '#d53e4f'],
+        ],
+      });
+    } else if (view === 'crop0') {
+      map.setPaintProperty('fine_grid', 'fill-color', {
+        property: 'crop0',
+        stops: [
+          // ranges from 0 to 70
+          [-9999, '#000000'],
+          [0, '#3288bd'],
+          [10, '#66c2a5'],
+          [20, '#abdda4'],
+          [30, '#e6f598'],
+          [40, '#fee08b'],
+          [50, '#fdae61'],
+          [60, '#f46d43'],
+          [70, '#d53e4f'],
+        ],
+      });
+    } else if (view === 'landarea') {
+      map.setPaintProperty('fine_grid', 'fill-color', {
+        property: 'landarea',
+        stops: [
+          // ranges from 0 to 70
+          [-9999, '#000000'],
+          [0, '#3288bd'],
+          [10, '#66c2a5'],
+          [20, '#abdda4'],
+          [30, '#e6f598'],
+          [40, '#fee08b'],
+          [50, '#fdae61'],
+          [60, '#f46d43'],
+          [70, '#d53e4f'],
+        ],
+      });
     }
   }
 
@@ -325,7 +408,10 @@ export default function Map() {
     <div>
       <div className="sidebar">
         {' '}
-        <div>Tile Elevation: {elevation}</div> <div>Land: {landlake}</div>
+        <div>Tile Elevation: {elevation}</div> <div>Land: {landlake}</div>{' '}
+        <div>Forest: {forest}</div> <div>Max. Land Area: {landarea}</div>
+        <div>Pop 3000BC: {pop3000}</div> <div>Pop 0AD: {pop0}</div>{' '}
+        <div>Cropland 0AD: {crop0}</div>{' '}
       </div>
       <Options view={view} setView={setView} />
       <div className="map-container" ref={mapContainer} />
