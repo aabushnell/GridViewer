@@ -230,6 +230,7 @@ export default function Map() {
   useEffect(() => {
     if (map && cachedFineGrids) {
       if (context === 'fine') {
+        console.log('called function 1');
         const [y, x] = coordToIndexCoarse(lat, lng);
         if (y !== centerGrid[0] || x !== centerGrid[1]) {
           axios({
@@ -298,16 +299,52 @@ export default function Map() {
     } else if (view === 'elevation') {
       map.setPaintProperty('fine_grid', 'fill-color', {
         property: 'elevation',
+        // every 100m change color from 0m to 3000m
         stops: [
-          [0, '#3288bd'],
-          [1000, '#66c2a5'],
-          [2000, '#abdda4'],
-          [3000, '#e6f598'],
-          [4000, '#fee08b'],
-          [5000, '#fdae61'],
-          [6000, '#f46d43'],
-          [7000, '#d53e4f'],
+          [-9999, '#000000'],
+          [0, '#3288BD'],
+          [100, '#509DB6'],
+          [200, '#6EB2B0'],
+          [300, '#8CC7AA'],
+          [400, '#ABDDA4'],
+          [500, '#BBDD9F'],
+          [600, '#CCDE9A'],
+          [700, '#DCDE95'],
+          [800, '#EDDF90'],
+          [900, '#FEE08B'],
+          [1000, '#FDD483'],
+          [1100, '#FCC97C'],
+          [1200, '#FBBD75'],
+          [1300, '#FAB26E'],
+          [1400, '#F9A667'],
+          [1500, '#F89B5F'],
+          [1600, '#F78F58'],
+          [1700, '#F68451'],
+          [1800, '#F5784A'],
+          [1900, '#F46D43'],
+          [2000, '#E25742'],
+          [2100, '#D14142'],
+          [2200, '#C02C42'],
+          [2300, '#AF1642'],
+          [2400, '#9E0142'],
+          //
+          [2500, '#8E0142'],
+          [2600, '#7D0142'],
+          [2700, '#6C0142'],
+          [2800, '#5B0142'],
+          [2900, '#4B0142'],
+          [3000, '#3A0142'],
         ],
+        // stops: [
+        //   [0, '#3288bd'],
+        //   [1000, '#66c2a5'],
+        //   [2000, '#abdda4'],
+        //   [3000, '#e6f598'],
+        //   [4000, '#fee08b'],
+        //   [5000, '#fdae61'],
+        //   [6000, '#f46d43'],
+        //   [7000, '#d53e4f'],
+        // ],
       });
     } else if (view === 'landlake') {
       map.setPaintProperty('fine_grid', 'fill-color', {
