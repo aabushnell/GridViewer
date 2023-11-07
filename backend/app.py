@@ -7,13 +7,13 @@ import grid_helpers as gh
 
 
 app = Flask(__name__)
-app.elevation = fr.read_elevation_full()
-app.landlake = fr.read_landlake_full()
-app.forests = fr.read_forests_full()
-app.pop3000 = fr.read_pop3000_full()
-app.pop0 = fr.read_pop0_full()
-app.crop0 = fr.read_crop0_full()
-app.landarea = fr.read_landarea_full()
+
+data_files = ['elevation', 'landlake', 'forest_wwf_cr',
+              'maxln_cr', 'popc_3000BC', 'popc_0AD', 'cropland0AD']
+app.data = dict()
+
+for filename in data_files:
+    app.data[filename] = fr.read_data(filename)
 
 
 @app.after_request
@@ -30,12 +30,5 @@ def fine_grid(y_center, x_center):
     depth = 3
     features = []
     for y, x in gh.get_neighboring_coarse(y_center, x_center, depth):
-        features += jb.get_fine_grid_json(y, x,
-                                          app.elevation,
-                                          app.landlake,
-                                          app.forests,
-                                          app.pop3000,
-                                          app.pop0,
-                                          app.crop0,
-                                          app.landarea)
+        features += jb.get_fine_grid_json(y, x, app.data)
     return {"type": "FeatureCollection", "features": features}

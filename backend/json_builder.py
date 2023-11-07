@@ -1,15 +1,14 @@
 from itertools import product
 
+import numpy as np
+
 import grid_helpers as gh
 
 offset = 0.00027778
 cellsize = 1/12
 
 
-def get_fine_grid_json(y_coarse: int, x_coarse: int, elev_array: list[list[int]],
-                       land_array: list[list[int]], forest_array: list[list[int]],
-                       pop3000_array: list[list[int]], pop0_array: list[list[int]],
-                       crop0_array: list[list[int]], landarea_array: list[list[int]]) -> dict:
+def get_fine_grid_json(y_coarse: int, x_coarse: int, data: dict) -> dict:
 
     y_start = y_coarse * 24
     x_start = x_coarse * 24
@@ -21,13 +20,13 @@ def get_fine_grid_json(y_coarse: int, x_coarse: int, elev_array: list[list[int]]
     for y, x in product(range(y_start, y_end), range(x_start, x_end)):
 
         cell_id = y*4320 + x
-        elevation = elev_array[y][x]
-        landlake = land_array[y][x]
-        forests = forest_array[y][x]
-        pop3000 = pop3000_array[y][x]
-        pop0 = pop0_array[y][x]
-        crop0 = crop0_array[y][x]
-        landarea = landarea_array[y][x]
+        elevation = data['elevation'][y, x]
+        landlake = data['landlake'][y, x]
+        forests = data['forest_wwf_cr'][y, x]
+        landarea = data['maxln_cr'][y, x]
+        pop3000 = data['popc_3000BC'][y, x]
+        pop0 = data['popc_0AD'][y, x]
+        crop0 = data['cropland0AD'][y, x]
 
         # center_lat, center_lon = gh.index_to_coord(y, x, cellsize, center=True)
 
