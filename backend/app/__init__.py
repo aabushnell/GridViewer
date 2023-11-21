@@ -30,6 +30,10 @@ def create_app():
         header['Access-Control-Allow-Methods'] = 'OPTIONS, HEAD, GET, POST, DELETE, PUT'
         return response
 
+    @app.route('/')
+    def default():
+        return "Hello World!"
+
     @app.route('/api/fine_grid/<y_center>/<x_center>')
     def fine_grid(y_center, x_center):
         depth = 3
