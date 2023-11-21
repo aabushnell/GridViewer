@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
 import Map from './Map';
-import './App.css';
+// import './App.css';
 
 function App() {
   return (
