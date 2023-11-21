@@ -11,7 +11,7 @@ def read_int(f: BinaryIO) -> int:
     return height
 
 
-def read_data(filename: str) -> np.ndarray[np.ndarray[int]]:
+def read_data(filename: str) -> np.ndarray:
     path = './app/data/' + filename + '.nc'
     data_array_xarray = xr.open_dataarray(path,
                                           engine='h5netcdf')
@@ -20,7 +20,7 @@ def read_data(filename: str) -> np.ndarray[np.ndarray[int]]:
     return np.float64(data_array_netcdf4)
 
 
-def read_data_float(filename: str) -> np.ndarray[np.ndarray[float]]:
+def read_data_float(filename: str) -> np.ndarray:
     path = './app/data/' + filename + '.nc'
     data_array_xarray = xr.open_dataarray(path,
                                           engine='h5netcdf')
@@ -29,7 +29,7 @@ def read_data_float(filename: str) -> np.ndarray[np.ndarray[float]]:
     return np.float64(data_array_netcdf4)
 
 
-def read_costs(y: int, x: int) -> np.ndarray[np.ndarray[np.ndarray[float]]]:
+def read_costs(y: int, x: int) -> np.ndarray:
     path = f'../../../Data/RAW_COST_DATA/{y}/{x}.nc'
     data_array_xarray = xr.open_dataarray(path,
                                           engine='h5netcdf')

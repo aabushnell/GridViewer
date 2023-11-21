@@ -130,7 +130,7 @@ def get_fine_grid_json_empty(y_coarse: int, x_coarse: int) -> dict:
 
 
 def get_costs_from_point(y_fine: int, x_fine: int, nbr_offset: int,
-                         cost_grid: np.ndarray[float], data: dict) -> dict:
+                         cost_grid: np.ndarray, data: dict) -> dict:
 
     y_coarse = y_fine // 24
     x_coarse = x_fine // 24
