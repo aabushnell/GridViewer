@@ -2,12 +2,13 @@
 TODO
 """
 import math
+import typing
 from itertools import product
 
 
 def coord_to_index(lat: float, lon: float, cell_size: float,
                    lat_start: float = 90,
-                   lon_start: float = 0) -> tuple[int, int]:
+                   lon_start: float = 0) -> typing.Tuple[int, int]:
     """
     Converts a point defined by latitude and longitude coordinates
     (must be north and east only) into cell indices of a grid
@@ -27,7 +28,7 @@ def coord_to_index(lat: float, lon: float, cell_size: float,
 
 def index_to_coord(y: int, x: int, cell_size: float,
                    lat_start: float = 90, lon_start: float = 0,
-                   center: bool = False) -> tuple[float, float]:
+                   center: bool = False) -> typing.Tuple[float, float]:
     """
     Converts index points (y -> latitude, x -> longitude) of a grid
     with height and width of 'cell_size' to the latitude and longitude
@@ -44,7 +45,7 @@ def index_to_coord(y: int, x: int, cell_size: float,
 
 def get_valid_neighbors(y_pos: int, x_pos: int, depth: int,
                         y_dim: int, x_dim: int,
-                        include_middle: bool = False) -> list[tuple[int, int]]:
+                        include_middle: bool = False) -> typing.List[typing.Tuple[int, int]]:
     """
     Returns the relative positions of valid neighbor points in a 2D grid.
     """
@@ -58,7 +59,7 @@ def get_valid_neighbors(y_pos: int, x_pos: int, depth: int,
 
 def get_valid_neigbors_split(y_pos: int, x_pos: int, depth: int,
                              y_dim: int, x_dim: int
-                             ) -> tuple[list[int], list[int]]:
+                             ) -> typing.Tuple[typing.List[int], typing.List[int]]:
     pn = get_valid_neighbors(y_pos, x_pos, depth, y_dim, x_dim)
 
     ys = [x[0] for x in pn]
@@ -67,7 +68,7 @@ def get_valid_neigbors_split(y_pos: int, x_pos: int, depth: int,
     return ys, xs
 
 
-def get_neighboring_coarse(y_center: int, x_center: int, depth: int) -> list[tuple[int, int]]:
+def get_neighboring_coarse(y_center: int, x_center: int, depth: int) -> typing.List[typing.Tuple[int, int]]:
 
     return [(y, x) if 0 <= x < 180 else (y, (x + 180) % 180)
             for y, x in product(range(int(y_center) - (depth - 1),
