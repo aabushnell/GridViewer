@@ -73,6 +73,15 @@ export default function Options({ view, setView }) {
         onChange={() => setView('crop0')}
       />
       <label htmlFor="crop0">Cropland 0AD</label>
+      <input
+        type="radio"
+        name="weight"
+        value="weight"
+        id="weight"
+        checked={view === 'weight'}
+        onChange={() => setView('weight')}
+      />
+      <label htmlFor="weight">Weight</label>
     </div>
   );
 }

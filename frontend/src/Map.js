@@ -41,6 +41,15 @@ export default function Map() {
   const [pop0, setPop0] = useState(null);
   const [crop0, setCrop0] = useState(null);
   const [landarea, setLandArea] = useState(null);
+  const [weight, setWeight] = useState(null);
+  const [coarseIndexY, setCoarseIndexY] = useState(null);
+  const [coarseIndexX, setCoarseIndexX] = useState(null);
+  const [fineIndexY, setFineIndexY] = useState(null);
+  const [fineIndexX, setFineIndexX] = useState(null);
+
+  const [neighbor, setNeighbor] = useState(null);
+  const [prevNeighbor, setPrevNeighbor] = useState(-1);
+
   const [view, setView] = useState('none');
 
   const [cachedFineGrids, setCachedFineGrids] = useState(null);
@@ -135,12 +144,14 @@ export default function Map() {
       map.on('mousemove', 'coarse_grid', (e) => {
         if (e.features.length > 0) {
           setHoveredIDCoarse(e.features[0].id);
+          setCoarseIndexY(e.features[0].properties.index_y);
+          setCoarseIndexX(e.features[0].properties.index_x);
         }
       });
 
       map.on('mousemove', 'fine_grid', (e) => {
         if (e.features.length > 0) {
-          console.log(e.features[0].id);
+          // console.log(e.features[0].id);
           setHoveredIDFine(e.features[0].id);
           setElevation(e.features[0].properties.elevation);
           setLandLake(e.features[0].properties.landlake);
@@ -149,6 +160,9 @@ export default function Map() {
           setPop0(e.features[0].properties.pop0);
           setCrop0(e.features[0].properties.crop0);
           setLandArea(e.features[0].properties.landarea);
+          setWeight(e.features[0].properties.sample_weight.toFixed(5));
+          setFineIndexY(e.features[0].properties.index_y);
+          setFineIndexX(e.features[0].properties.index_x);
         }
       });
 
@@ -172,6 +186,8 @@ export default function Map() {
 
     setMap(map);
   }, []);
+
+  // Hover Highlighting
 
   useEffect(() => {
     if (map && hoveredIDCoarse) {
@@ -203,11 +219,14 @@ export default function Map() {
     }
   }, [context, hoveredIDFine, prevHoveredIDFine, map]);
 
+  // Setting Fine Grid
+
   useEffect(() => {
     if (map) {
       if (zoom < ZOOM_THRESHOLD && prevZoom >= ZOOM_THRESHOLD) {
         setCachedFineGrids({});
         setContext('coarse');
+        setNeighbor(null);
       } else if (zoom >= ZOOM_THRESHOLD && prevZoom < ZOOM_THRESHOLD) {
         const [y, x] = coordToIndexCoarse(lat, lng);
         axios({
@@ -230,7 +249,6 @@ export default function Map() {
   useEffect(() => {
     if (map && cachedFineGrids) {
       if (context === 'fine') {
-        console.log('called function 1');
         const [y, x] = coordToIndexCoarse(lat, lng);
         if (y !== centerGrid[0] || x !== centerGrid[1]) {
           axios({
@@ -248,6 +266,24 @@ export default function Map() {
       }
     }
   }, [cachedFineGrids, centerGrid, lat, lng, map]);
+
+  useEffect(() => {
+    if (map && neighbor && neighbor !== prevNeighbor) {
+      const y = fineIndexY;
+      const x = fineIndexX;
+      axios({
+        method: 'GET',
+        url: `http://localhost:5000/api/costs_from_point/${y}/${x}/${neighbor}`,
+      })
+        .then((res) => {
+          setCachedFineGrids(res.data);
+        })
+        .catch((err) => {
+          console.log(err);
+        });
+      setPrevNeighbor(neighbor);
+    }
+  }, [neighbor, map]);
 
   useEffect(() => {
     if (map && cachedFineGrids) {
@@ -335,16 +371,6 @@ export default function Map() {
           [2900, '#4B0142'],
           [3000, '#3A0142'],
         ],
-        // stops: [
-        //   [0, '#3288bd'],
-        //   [1000, '#66c2a5'],
-        //   [2000, '#abdda4'],
-        //   [3000, '#e6f598'],
-        //   [4000, '#fee08b'],
-        //   [5000, '#fdae61'],
-        //   [6000, '#f46d43'],
-        //   [7000, '#d53e4f'],
-        // ],
       });
     } else if (view === 'landlake') {
       map.setPaintProperty('fine_grid', 'fill-color', {
@@ -426,6 +452,35 @@ export default function Map() {
           [70, '#d53e4f'],
         ],
       });
+    } else if (view === 'weight') {
+      map.setPaintProperty('fine_grid', 'fill-color', {
+        property: 'sample_weight',
+        stops: [
+          // ranges from 0 to 0.1 in intervals of 0.005
+          [-9999, '#000000'],
+          [0, '#3288bd'],
+          [0.005, '#66c2a5'],
+          [0.01, '#abdda4'],
+          [0.015, '#e6f598'],
+          [0.02, '#fee08b'],
+          [0.025, '#fdae61'],
+          [0.03, '#f46d43'],
+          [0.035, '#d53e4f'],
+          [0.04, '#d53e4f'],
+          [0.045, '#d53e4f'],
+          [0.05, '#d53e4f'],
+          [0.055, '#d53e4f'],
+          [0.06, '#d53e4f'],
+          [0.065, '#d53e4f'],
+          [0.07, '#d53e4f'],
+          [0.075, '#d53e4f'],
+          [0.08, '#d53e4f'],
+          [0.085, '#d53e4f'],
+          [0.09, '#d53e4f'],
+          [0.095, '#d53e4f'],
+          [0.1, '#d53e4f'],
+        ],
+      });
     }
   }
 
@@ -437,16 +492,55 @@ export default function Map() {
 
   function changeGrid() {}
 
+  useEffect(() => {
+    function handleKeyDown(e) {
+      if (e.keyCode === 32 && context === 'fine') {
+        console.log('spacebar pressed');
+        setNeighbor((state) => {
+          if (state === null) {
+            return 0;
+          } else if (state === 7) {
+            return null;
+          } else {
+            return state + 1;
+          }
+        });
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [context]);
+
+  // detect the spacebar keypress
+
   return (
     <div>
-      <div className="sidebar">
-        {' '}
-        <div>Tile Elevation: {elevation}</div> <div>Land: {landlake}</div>{' '}
-        <div>Forest: {forest}</div> <div>Max. Land Area: {landarea}</div>
-        <div>Pop 3000BC: {pop3000}</div> <div>Pop 0AD: {pop0}</div>{' '}
-        <div>Cropland 0AD: {crop0}</div>{' '}
-      </div>
-      <Options view={view} setView={setView} />
+      {context === 'coarse' ? (
+        <div className="sidebar">
+          {' '}
+          <div>Neigbhor: {neighbor}</div>
+          <div>
+            Index: ({coarseIndexX}, {coarseIndexY})
+          </div>
+        </div>
+      ) : (
+        <div className="sidebar">
+          {' '}
+          <div>Neigbhor: {neighbor}</div>
+          <div>
+            Index: ({fineIndexX}, {fineIndexY})
+          </div>
+          <div>Tile Elevation: {elevation}</div> <div>Land: {landlake}</div>{' '}
+          <div>Forest: {forest}</div> <div>Max. Land Area: {landarea}</div>
+          <div>Pop 3000BC: {pop3000}</div> <div>Pop 0AD: {pop0}</div>{' '}
+          <div>Cropland 0AD: {crop0}</div> <div>Sample Weight: {weight}</div>{' '}
+        </div>
+      )}
+      {context === 'fine' && <Options view={view} setView={setView} />}
       <div className="map-container" ref={mapContainer} />
     </div>
   );
