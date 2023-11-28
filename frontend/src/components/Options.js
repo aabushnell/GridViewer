@@ -1,4 +1,4 @@
-export default function Options({ view, setView }) {
+export default function Options({ view, setView, setViewMode }) {
   return (
     <div className="options">
       <input
@@ -82,6 +82,18 @@ export default function Options({ view, setView }) {
         onChange={() => setView('weight')}
       />
       <label htmlFor="weight">Weight</label>
+      <input
+        type="radio"
+        name="cost"
+        value="cost"
+        id="cost"
+        checked={view === 'cost'}
+        onChange={() => {
+          setView('cost');
+          setViewMode('cost');
+        }}
+      />
+      <label htmlFor="cost">Cost</label>
     </div>
   );
 }

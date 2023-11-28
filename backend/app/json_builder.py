@@ -66,7 +66,7 @@ def get_fine_grid_json(y_coarse: int, x_coarse: int, data: dict, empty_cost: boo
                         "pop0": pop0,
                         "crop0": crop0,
                         "landarea": landarea,
-                        "sample_weight": sample_weight
+                        "weight": sample_weight
                     },
                 "id": cell_id
         }
@@ -136,7 +136,7 @@ def get_costs_from_point(y_coarse: int, x_coarse: int,
                         "pop0": pop0,
                         "crop0": crop0,
                         "landarea": landarea,
-                        "sample_weight": sample_weight
+                        "weight": sample_weight
                     },
                 "id": cell_id
         }

@@ -55,6 +55,8 @@ def create_app():
         for i, (y, x) in enumerate(gh.get_neighboring_coarse_square(y_coarse, x_coarse, 1)):
             cost_grid = fr.read_costs(y_coarse, x_coarse)[i, origin_id, :]
             features += jb.get_costs_from_point(y, x, cost_grid, app.data)
+        features += jb.get_fine_grid_json(y_coarse,
+                                          x_coarse, app.data, empty_cost=True)
         return {"type": "FeatureCollection", "features": features}
 
     return app

@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
 import axios from 'axios';
 import mapboxgl from '!mapbox-gl'; // eslint-disable-line import/no-webpack-loader-syntax
 import data from './coarse_grid.json';
@@ -10,8 +10,8 @@ import { coordToIndexCoarse } from './helpers.js';
 mapboxgl.accessToken =
   'pk.eyJ1IjoiYWFidXNobmVsbCIsImEiOiJjbG5hYnFkZGYwMmpuMm5tcWR6ZXhkeTI4In0.1N86NiPVYwfxJ3Q-Ldi_Pw';
 
-const ZOOM_THRESHOLD = 6;
-const ZOOM_TOLERANCE = 0.2;
+const ZOOM_THRESHOLD = 5.2;
+const ZOOM_TOLERANCE = 1.0;
 
 export default function Map() {
   const mapContainer = useRef(null);
@@ -19,16 +19,10 @@ export default function Map() {
 
   const [lng, setLng] = useState(10);
   const [lat, setLat] = useState(-40);
-
-  const [mouseLng, setMouseLng] = useState(null);
-  const [mouseLat, setMouseLat] = useState(null);
-
   const [zoom, setZoom] = useState(2);
-  const [prevZoom, setPrevZoom] = useState(2);
 
   const [hoveredIDCoarse, setHoveredIDCoarse] = useState(null);
   const [prevHoveredIDCoarse, setPrevHoveredIDCoarse] = useState(null);
-
   const [hoveredIDFine, setHoveredIDFine] = useState(null);
   const [prevHoveredIDFine, setPrevHoveredIDFine] = useState(null);
 
@@ -42,6 +36,8 @@ export default function Map() {
   const [crop0, setCrop0] = useState(null);
   const [landarea, setLandArea] = useState(null);
   const [weight, setWeight] = useState(null);
+  const [cost, setCost] = useState(null);
+
   const [coarseIndexY, setCoarseIndexY] = useState(null);
   const [coarseIndexX, setCoarseIndexX] = useState(null);
   const [fineIndexY, setFineIndexY] = useState(null);
@@ -51,6 +47,7 @@ export default function Map() {
   const [prevNeighbor, setPrevNeighbor] = useState(-1);
 
   const [view, setView] = useState('none');
+  const [viewMode, setViewMode] = useState('none');
 
   const [cachedFineGrids, setCachedFineGrids] = useState(null);
   const [centerGrid, setCenterGrid] = useState(null);
@@ -65,9 +62,6 @@ export default function Map() {
         sources: {
           'simple-tiles': {
             type: 'raster',
-            // point to our third-party tiles. Note that some examples
-            // show a "url" property. This only applies to tilesets with
-            // corresponding TileJSON (such as mapbox tiles).
             tiles: [
               'https://a.basemaps.cartocdn.com/rastertiles/light_all/{z}/{x}/{y}.png',
               'https://b.basemaps.cartocdn.com/rastertiles/light_all/{z}/{x}/{y}.png',
@@ -136,11 +130,6 @@ export default function Map() {
         setZoom(map.getZoom().toFixed(2));
       });
 
-      map.on('mousemove', (e) => {
-        setMouseLat(e.lngLat.lat.toFixed(4));
-        setMouseLng(e.lngLat.lng.toFixed(4));
-      });
-
       map.on('mousemove', 'coarse_grid', (e) => {
         if (e.features.length > 0) {
           setHoveredIDCoarse(e.features[0].id);
@@ -160,9 +149,10 @@ export default function Map() {
           setPop0(e.features[0].properties.pop0);
           setCrop0(e.features[0].properties.crop0);
           setLandArea(e.features[0].properties.landarea);
-          setWeight(e.features[0].properties.sample_weight.toFixed(5));
+          setWeight(e.features[0].properties.weight.toFixed(5));
           setFineIndexY(e.features[0].properties.index_y);
           setFineIndexX(e.features[0].properties.index_x);
+          setCost(e.features[0].properties.cost);
         }
       });
 
@@ -221,69 +211,206 @@ export default function Map() {
 
   // Setting Fine Grid
 
+  function getFineGrid(y, x, costs_displayed = false) {
+    let request_url;
+    if (costs_displayed) {
+      request_url = `http://localhost:5000/api/costs_from_point/${y}/${x}`;
+      // request_url = `http://longrungrowth.huma-num.fr/gridviewer-backend/api/costs_from_point/${y}/${x}`
+    } else {
+      request_url = `http://localhost:5000/api/fine_grid/${y}/${x}`;
+      // request_url = `http://longrungrowth.huma-num.fr/gridviewer-backend/api/fine_grid/${y}/${x}`
+    }
+    axios({
+      method: 'GET',
+      url: request_url,
+    })
+      .then((res) => {
+        setCachedFineGrids(res.data);
+      })
+      .catch((err) => {
+        console.log(err);
+      });
+  }
+
   useEffect(() => {
     if (map) {
-      if (zoom < ZOOM_THRESHOLD && prevZoom >= ZOOM_THRESHOLD) {
+      if (zoom < ZOOM_THRESHOLD && context === 'fine') {
         setCachedFineGrids({});
         setContext('coarse');
+        setViewMode('none');
         setNeighbor(null);
-      } else if (zoom >= ZOOM_THRESHOLD && prevZoom < ZOOM_THRESHOLD) {
+      } else if (zoom >= ZOOM_THRESHOLD && context === 'coarse') {
         const [y, x] = coordToIndexCoarse(lat, lng);
-        axios({
-          method: 'GET',
-          url: `http://localhost:5000/api/fine_grid/${y}/${x}`,
-        })
-          .then((res) => {
-            setCachedFineGrids(res.data);
-          })
-          .catch((err) => {
-            console.log(err);
-          });
+        getFineGrid(y, x);
         setContext('fine');
         setCenterGrid([y, x]);
       }
     }
-    setPrevZoom(zoom);
-  }, [zoom, prevZoom, lat, lng, map]);
+  }, [zoom, context, lat, lng, map]);
 
   useEffect(() => {
     if (map && cachedFineGrids) {
       if (context === 'fine') {
-        const [y, x] = coordToIndexCoarse(lat, lng);
-        if (y !== centerGrid[0] || x !== centerGrid[1]) {
-          axios({
-            method: 'GET',
-            url: `http://localhost:5000/api/fine_grid/${y}/${x}`,
-          })
-            .then((res) => {
-              setCachedFineGrids(res.data);
-            })
-            .catch((err) => {
-              console.log(err);
-            });
-          setCenterGrid([y, x]);
+        if (viewMode !== 'cost') {
+          const [y, x] = coordToIndexCoarse(lat, lng);
+          if (y !== centerGrid[0] || x !== centerGrid[1]) {
+            getFineGrid(y, x);
+            setCenterGrid([y, x]);
+          }
         }
       }
     }
-  }, [cachedFineGrids, centerGrid, lat, lng, map]);
+  }, [cachedFineGrids, context, centerGrid, viewMode, lat, lng, map]);
 
-  useEffect(() => {
-    if (map && neighbor && neighbor !== prevNeighbor) {
-      const y = fineIndexY;
-      const x = fineIndexX;
-      axios({
-        method: 'GET',
-        url: `http://localhost:5000/api/costs_from_point/${y}/${x}/${neighbor}`,
-      })
-        .then((res) => {
-          setCachedFineGrids(res.data);
-        })
-        .catch((err) => {
-          console.log(err);
-        });
-      setPrevNeighbor(neighbor);
+  const getRamp = useCallback(() => {
+    if (view === 'elevation') {
+      return [
+        [-9999, '#000000'],
+        [0, '#3288BD'],
+        [100, '#509DB6'],
+        [200, '#6EB2B0'],
+        [300, '#8CC7AA'],
+        [400, '#ABDDA4'],
+        [500, '#BBDD9F'],
+        [600, '#CCDE9A'],
+        [700, '#DCDE95'],
+        [800, '#EDDF90'],
+        [900, '#FEE08B'],
+        [1000, '#FDD483'],
+        [1100, '#FCC97C'],
+        [1200, '#FBBD75'],
+        [1300, '#FAB26E'],
+        [1400, '#F9A667'],
+        [1500, '#F89B5F'],
+        [1600, '#F78F58'],
+        [1700, '#F68451'],
+        [1800, '#F5784A'],
+        [1900, '#F46D43'],
+        [2000, '#E25742'],
+        [2100, '#D14142'],
+        [2200, '#C02C42'],
+        [2300, '#AF1642'],
+        [2400, '#9E0142'],
+        [2500, '#8E0142'],
+        [2600, '#7D0142'],
+        [2700, '#6C0142'],
+        [2800, '#5B0142'],
+        [2900, '#4B0142'],
+        [3000, '#3A0142'],
+      ];
+    } else if (view === 'landlake') {
+      return [
+        [-9999, '#ffffff'],
+        [0, '#1b14e3'],
+        [1, '#c41010'],
+      ];
+    } else if (view === 'forest') {
+      return [
+        [-9999, '#ffffff'],
+        [0, '#1b14e3'],
+        [1, '#c41010'],
+      ];
+    } else if (view === 'pop3000') {
+      return [
+        [-9999, '#000000'],
+        [0, '#3288bd'],
+        [1000, '#66c2a5'],
+        [2000, '#abdda4'],
+        [3000, '#e6f598'],
+        [4000, '#fee08b'],
+        [5000, '#fdae61'],
+        [6000, '#f46d43'],
+        [7000, '#d53e4f'],
+      ];
+    } else if (view === 'pop0') {
+      return [
+        [-9999, '#000000'],
+        [0, '#3288bd'],
+        [1000, '#66c2a5'],
+        [2000, '#abdda4'],
+        [3000, '#e6f598'],
+        [4000, '#fee08b'],
+        [5000, '#fdae61'],
+        [6000, '#f46d43'],
+        [7000, '#d53e4f'],
+      ];
+    } else if (view === 'crop0') {
+      return [
+        [-9999, '#000000'],
+        [0, '#3288bd'],
+        [10, '#66c2a5'],
+        [20, '#abdda4'],
+        [30, '#e6f598'],
+        [40, '#fee08b'],
+        [50, '#fdae61'],
+        [60, '#f46d43'],
+        [70, '#d53e4f'],
+      ];
+    } else if (view === 'landarea') {
+      return [
+        [-9999, '#000000'],
+        [0, '#3288bd'],
+        [10, '#66c2a5'],
+        [20, '#abdda4'],
+        [30, '#e6f598'],
+        [40, '#fee08b'],
+        [50, '#fdae61'],
+        [60, '#f46d43'],
+        [70, '#d53e4f'],
+      ];
+    } else if (view === 'weight') {
+      return [
+        //ranges from 0 to 0.01 in increments of 0.0005
+        [-9999, '#000000'],
+        [0, '#3288BD'],
+        [0.0005, '#509DB6'],
+        [0.001, '#6EB2B0'],
+        [0.0015, '#8CC7AA'],
+        [0.002, '#ABDDA4'],
+        [0.0025, '#BBDD9F'],
+        [0.003, '#CCDE9A'],
+        [0.0035, '#DCDE95'],
+        [0.004, '#EDDF90'],
+        [0.0045, '#FEE08B'],
+        [0.005, '#FDD483'],
+        [0.0055, '#FCC97C'],
+        [0.006, '#FBBD75'],
+        [0.0065, '#FAB26E'],
+        [0.007, '#F9A667'],
+        [0.0075, '#F89B5F'],
+        [0.008, '#F78F58'],
+        [0.0085, '#F68451'],
+        [0.009, '#F5784A'],
+        [0.0095, '#F46D43'],
+        [0.01, '#9E0142'],
+      ];
+    } else if (view === 'cost') {
+      return [
+        [-9999, '#000000'],
+        [0, '#000000'],
+        [25, '#3288BD'],
+        [50, '#509DB6'],
+        [75, '#6EB2B0'],
+        [100, '#8CC7AA'],
+        [125, '#ABDDA4'],
+        [150, '#BBDD9F'],
+        [175, '#CCDE9A'],
+        [200, '#DCDE95'],
+        [225, '#EDDF90'],
+        [250, '#FEE08B'],
+        [275, '#FCC97C'],
+        [300, '#FAB26E'],
+        [325, '#F89B5F'],
+        [350, '#F68451'],
+        [375, '#F46D43'],
+        [400, '#E25742'],
+        [425, '#D14142'],
+        [450, '#C02C42'],
+        [475, '#AF1642'],
+        [500, '#9E0142'],
+      ];
     }
-  }, [neighbor, map]);
+  }, [view]);
 
   useEffect(() => {
     if (map && cachedFineGrids) {
@@ -298,7 +425,7 @@ export default function Map() {
             interactive: true,
             paint: {
               'fill-color': '#000000',
-              'fill-opacity': 0.25,
+              'fill-opacity': 0.4,
             },
           },
           'coarse_grid'
@@ -320,190 +447,54 @@ export default function Map() {
             ],
           },
         });
-        drawView();
+        if (view === 'none') {
+          map.setPaintProperty('fine_grid', 'fill-color', 'rgba(0,0,0,0)');
+        } else {
+          const ramp = getRamp();
+          map.setPaintProperty('fine_grid', 'fill-color', {
+            property: view,
+            stops: ramp,
+          });
+        }
       } else {
         map.removeLayer('fine_grid');
         map.removeLayer('fine_lines');
         map.getSource('fine_grid').setData(cachedFineGrids);
       }
     }
-  }, [context, cachedFineGrids, map]);
-
-  function drawView() {
-    if (view === 'none') {
-      map.setPaintProperty('fine_grid', 'fill-color', 'rgba(0,0,0,0)');
-    } else if (view === 'elevation') {
-      map.setPaintProperty('fine_grid', 'fill-color', {
-        property: 'elevation',
-        // every 100m change color from 0m to 3000m
-        stops: [
-          [-9999, '#000000'],
-          [0, '#3288BD'],
-          [100, '#509DB6'],
-          [200, '#6EB2B0'],
-          [300, '#8CC7AA'],
-          [400, '#ABDDA4'],
-          [500, '#BBDD9F'],
-          [600, '#CCDE9A'],
-          [700, '#DCDE95'],
-          [800, '#EDDF90'],
-          [900, '#FEE08B'],
-          [1000, '#FDD483'],
-          [1100, '#FCC97C'],
-          [1200, '#FBBD75'],
-          [1300, '#FAB26E'],
-          [1400, '#F9A667'],
-          [1500, '#F89B5F'],
-          [1600, '#F78F58'],
-          [1700, '#F68451'],
-          [1800, '#F5784A'],
-          [1900, '#F46D43'],
-          [2000, '#E25742'],
-          [2100, '#D14142'],
-          [2200, '#C02C42'],
-          [2300, '#AF1642'],
-          [2400, '#9E0142'],
-          //
-          [2500, '#8E0142'],
-          [2600, '#7D0142'],
-          [2700, '#6C0142'],
-          [2800, '#5B0142'],
-          [2900, '#4B0142'],
-          [3000, '#3A0142'],
-        ],
-      });
-    } else if (view === 'landlake') {
-      map.setPaintProperty('fine_grid', 'fill-color', {
-        property: 'landlake',
-        stops: [
-          [-9999, '#ffffff'],
-          [0, '#1b14e3'],
-          [1, '#c41010'],
-        ],
-      });
-    } else if (view === 'forest') {
-      map.setPaintProperty('fine_grid', 'fill-color', {
-        property: 'forest',
-        stops: [
-          [-9999, '#ffffff'],
-          [0, '#1b14e3'],
-          [1, '#c41010'],
-        ],
-      });
-    } else if (view === 'pop3000') {
-      map.setPaintProperty('fine_grid', 'fill-color', {
-        property: 'pop3000',
-        stops: [
-          [-9999, '#000000'],
-          [0, '#3288bd'],
-          [1000, '#66c2a5'],
-          [2000, '#abdda4'],
-          [3000, '#e6f598'],
-          [4000, '#fee08b'],
-          [5000, '#fdae61'],
-          [6000, '#f46d43'],
-          [7000, '#d53e4f'],
-        ],
-      });
-    } else if (view === 'pop0') {
-      map.setPaintProperty('fine_grid', 'fill-color', {
-        property: 'pop0',
-        stops: [
-          [-9999, '#000000'],
-          [0, '#3288bd'],
-          [1000, '#66c2a5'],
-          [2000, '#abdda4'],
-          [3000, '#e6f598'],
-          [4000, '#fee08b'],
-          [5000, '#fdae61'],
-          [6000, '#f46d43'],
-          [7000, '#d53e4f'],
-        ],
-      });
-    } else if (view === 'crop0') {
-      map.setPaintProperty('fine_grid', 'fill-color', {
-        property: 'crop0',
-        stops: [
-          // ranges from 0 to 70
-          [-9999, '#000000'],
-          [0, '#3288bd'],
-          [10, '#66c2a5'],
-          [20, '#abdda4'],
-          [30, '#e6f598'],
-          [40, '#fee08b'],
-          [50, '#fdae61'],
-          [60, '#f46d43'],
-          [70, '#d53e4f'],
-        ],
-      });
-    } else if (view === 'landarea') {
-      map.setPaintProperty('fine_grid', 'fill-color', {
-        property: 'landarea',
-        stops: [
-          // ranges from 0 to 70
-          [-9999, '#000000'],
-          [0, '#3288bd'],
-          [10, '#66c2a5'],
-          [20, '#abdda4'],
-          [30, '#e6f598'],
-          [40, '#fee08b'],
-          [50, '#fdae61'],
-          [60, '#f46d43'],
-          [70, '#d53e4f'],
-        ],
-      });
-    } else if (view === 'weight') {
-      map.setPaintProperty('fine_grid', 'fill-color', {
-        property: 'sample_weight',
-        stops: [
-          // ranges from 0 to 0.1 in intervals of 0.005
-          [-9999, '#000000'],
-          [0, '#3288bd'],
-          [0.005, '#66c2a5'],
-          [0.01, '#abdda4'],
-          [0.015, '#e6f598'],
-          [0.02, '#fee08b'],
-          [0.025, '#fdae61'],
-          [0.03, '#f46d43'],
-          [0.035, '#d53e4f'],
-          [0.04, '#d53e4f'],
-          [0.045, '#d53e4f'],
-          [0.05, '#d53e4f'],
-          [0.055, '#d53e4f'],
-          [0.06, '#d53e4f'],
-          [0.065, '#d53e4f'],
-          [0.07, '#d53e4f'],
-          [0.075, '#d53e4f'],
-          [0.08, '#d53e4f'],
-          [0.085, '#d53e4f'],
-          [0.09, '#d53e4f'],
-          [0.095, '#d53e4f'],
-          [0.1, '#d53e4f'],
-        ],
-      });
-    }
-  }
+  }, [context, cachedFineGrids, view, getRamp, map]);
 
   useEffect(() => {
     if (map) {
-      drawView();
+      if (view === 'none') {
+        map.setPaintProperty('fine_grid', 'fill-color', 'rgba(0,0,0,0)');
+      } else {
+        const ramp = getRamp();
+        map.setPaintProperty('fine_grid', 'fill-color', {
+          property: view,
+          stops: ramp,
+        });
+      }
     }
-  }, [view, map]);
+  }, [view, getRamp, map]);
 
-  function changeGrid() {}
+  useEffect(() => {
+    if (map && neighbor) {
+      if (neighbor !== prevNeighbor) {
+        const y = fineIndexY;
+        const x = fineIndexX;
+        getFineGrid(y, x, true);
+        setPrevNeighbor(neighbor);
+      }
+    }
+  }, [neighbor, prevNeighbor, fineIndexY, fineIndexX, map]);
 
   useEffect(() => {
     function handleKeyDown(e) {
       if (e.keyCode === 32 && context === 'fine') {
         console.log('spacebar pressed');
         setNeighbor((state) => {
-          if (state === null) {
-            return 0;
-          } else if (state === 7) {
-            return null;
-          } else {
-            return state + 1;
-          }
+          return state + 1;
         });
       }
     }
@@ -522,7 +513,6 @@ export default function Map() {
       {context === 'coarse' ? (
         <div className="sidebar">
           {' '}
-          <div>Neigbhor: {neighbor}</div>
           <div>
             Index: ({coarseIndexX}, {coarseIndexY})
           </div>
@@ -530,7 +520,6 @@ export default function Map() {
       ) : (
         <div className="sidebar">
           {' '}
-          <div>Neigbhor: {neighbor}</div>
           <div>
             Index: ({fineIndexX}, {fineIndexY})
           </div>
@@ -538,9 +527,12 @@ export default function Map() {
           <div>Forest: {forest}</div> <div>Max. Land Area: {landarea}</div>
           <div>Pop 3000BC: {pop3000}</div> <div>Pop 0AD: {pop0}</div>{' '}
           <div>Cropland 0AD: {crop0}</div> <div>Sample Weight: {weight}</div>{' '}
+          <div>Cost: {cost}</div>
         </div>
       )}
-      {context === 'fine' && <Options view={view} setView={setView} />}
+      {context === 'fine' && (
+        <Options view={view} setView={setView} setViewMode={setViewMode} />
+      )}
       <div className="map-container" ref={mapContainer} />
     </div>
   );
