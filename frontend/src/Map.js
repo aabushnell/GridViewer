@@ -214,11 +214,11 @@ export default function Map() {
   function getFineGrid(y, x, costs_displayed = false) {
     let request_url;
     if (costs_displayed) {
-      request_url = `http://localhost:5000/api/costs_from_point/${y}/${x}`;
-      // request_url = `http://longrungrowth.huma-num.fr/gridviewer-backend/api/costs_from_point/${y}/${x}`
+      // request_url = `http://localhost:5000/api/costs_from_point/${y}/${x}`;
+      request_url = `http://longrungrowth.huma-num.fr/gridviewer-backend/api/costs_from_point/${y}/${x}`;
     } else {
-      request_url = `http://localhost:5000/api/fine_grid/${y}/${x}`;
-      // request_url = `http://longrungrowth.huma-num.fr/gridviewer-backend/api/fine_grid/${y}/${x}`
+      // request_url = `http://localhost:5000/api/fine_grid/${y}/${x}`;
+      request_url = `http://longrungrowth.huma-num.fr/gridviewer-backend/api/fine_grid/${y}/${x}`;
     }
     axios({
       method: 'GET',
@@ -254,6 +254,7 @@ export default function Map() {
         if (viewMode !== 'cost') {
           const [y, x] = coordToIndexCoarse(lat, lng);
           if (y !== centerGrid[0] || x !== centerGrid[1]) {
+            console.log('center changed');
             getFineGrid(y, x);
             setCenterGrid([y, x]);
           }

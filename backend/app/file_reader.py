@@ -31,7 +31,7 @@ def read_data_float(filename: str) -> np.ndarray:
 
 
 def read_costs(y: int, x: int) -> np.ndarray | None:
-    path = f'./app/data/RAW_COST_DATA/{y}/{x}.nc'
+    path = f'/data/RAW_COST_DATA/{y}/{x}.nc'
     if not os.path.exists(path):
         return None
     data_array_xarray = xr.open_dataarray(path,
