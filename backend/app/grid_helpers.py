@@ -68,10 +68,20 @@ def get_valid_neigbors_split(y_pos: int, x_pos: int, depth: int,
     return ys, xs
 
 
-def get_neighboring_coarse(y_center: int, x_center: int, depth: int) -> typing.List[typing.Tuple[int, int]]:
+def get_neighboring_coarse_rect(y_center: int, x_center: int, depth: int) -> typing.List[typing.Tuple[int, int]]:
 
     return [(y, x) if 0 <= x < 180 else (y, (x + 180) % 180)
             for y, x in product(range(int(y_center) - (depth - 1),
                                       int(y_center) + (depth)),
                                 range(int(x_center) - depth,
                                       int(x_center) + (depth + 1)))]
+
+
+def get_neighboring_coarse_square(y_center: int, x_center: int, depth: int) -> typing.List[typing.Tuple[int, int]]:
+
+    coords = []
+    for y in range(int(y_center) - depth, int(y_center) + depth + 1):
+        for x in range(int(x_center) - depth, int(x_center) + depth + 1):
+            if y != y_center or x != x_center:
+                coords.append((y, x) if 0 <= x < 180 else (y, (x + 180) % 180))
+    return coords

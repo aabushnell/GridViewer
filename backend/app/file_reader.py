@@ -1,4 +1,5 @@
 from typing import BinaryIO
+import os
 
 import numpy as np
 import xarray as xr
@@ -29,8 +30,10 @@ def read_data_float(filename: str) -> np.ndarray:
     return np.float64(data_array_netcdf4)
 
 
-def read_costs(y: int, x: int) -> np.ndarray:
-    path = f'../../../Data/RAW_COST_DATA/{y}/{x}.nc'
+def read_costs(y: int, x: int) -> np.ndarray | None:
+    path = f'./app/data/RAW_COST_DATA/{y}/{x}.nc'
+    if not os.path.exists(path):
+        return None
     data_array_xarray = xr.open_dataarray(path,
                                           engine='h5netcdf')
     data_array_netcdf4 = data_array_xarray.to_numpy()

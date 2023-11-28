@@ -38,27 +38,23 @@ def create_app():
     def fine_grid(y_center, x_center):
         depth = 3
         features = []
-        for y, x in gh.get_neighboring_coarse(y_center, x_center, depth):
+        for y, x in gh.get_neighboring_coarse_rect(y_center, x_center, depth):
             features += jb.get_fine_grid_json(y, x, app.data)
         return {"type": "FeatureCollection", "features": features}
 
-    @app.route('/api/costs_from_point/<y_fine>/<x_fine>/<offset>')
-    def costs_from_point(y_fine, x_fine, offset):
+    @app.route('/api/costs_from_point/<y_fine>/<x_fine>')
+    def costs_from_point(y_fine, x_fine):
         y_coarse = int(y_fine) // 24
         x_coarse = int(x_fine) // 24
+
         y_local = int(y_fine) % 24
         x_local = int(x_fine) % 24
-        y_offset, x_offset = offset_dict[int(offset)]
         origin_id = y_local * 24 + x_local
+
         features = []
-        cost_grid = fr.read_costs(
-            y_coarse + y_offset, x_coarse + x_offset)[int(offset), origin_id, :]
-        for y, x in gh.get_neighboring_coarse(y_coarse, x_coarse, 3):
-            if (y, x) == (y_coarse + y_offset, x_coarse + x_offset):
-                features += jb.get_costs_from_point(int(y_fine),
-                                                    int(x_fine), int(offset), cost_grid, app.data)
-            else:
-                features += jb.get_fine_grid_json(y, x, app.data)
+        for i, (y, x) in enumerate(gh.get_neighboring_coarse_square(y_coarse, x_coarse, 1)):
+            cost_grid = fr.read_costs(y_coarse, x_coarse)[i, origin_id, :]
+            features += jb.get_costs_from_point(y, x, cost_grid, app.data)
         return {"type": "FeatureCollection", "features": features}
 
     return app
