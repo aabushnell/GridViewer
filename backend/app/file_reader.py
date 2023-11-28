@@ -30,7 +30,7 @@ def read_data_float(filename: str) -> np.ndarray:
     return np.float64(data_array_netcdf4)
 
 
-def read_costs(y: int, x: int) -> np.ndarray | None:
+def read_costs(y: int, x: int) -> any
     path = f'/data/RAW_COST_DATA/{y}/{x}.nc'
     if not os.path.exists(path):
         return None
